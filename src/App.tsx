@@ -2,8 +2,6 @@ import React, { useRef } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 
-import 'primereact/resources/themes/lara-light-blue/theme.css';
-
 GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 function App() {
@@ -14,6 +12,7 @@ function App() {
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = async () => {
       const typedarray = new Uint8Array(reader.result as ArrayBuffer);
       const pdf = await getDocument({ data: typedarray }).promise;
@@ -24,31 +23,19 @@ function App() {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
 
-        let currentLine = '';
-        let prevY: number | null = null;
-
-        content.items.forEach((item: any) => {
-          const text = item.str?.trim();
-          if (!text) return;
-
-          const y = item.transform[5]; // y ekseni
-          if (prevY !== null && Math.abs(prevY - y) > 5) {
-            fullText += `<p>${currentLine}</p>\n`;
-            currentLine = '';
-          }
-
-          currentLine += `${text} `;
-          prevY = y;
-        });
-
-        if (currentLine) {
-          fullText += `<p>${currentLine}</p>\n`;
-        }
+        const pageText = content.items.map((item: any) => item.str).join(' ');
+        fullText += `<p>${pageText}</p>\n`;
       }
 
       console.log("✅ PDF'den gelen metin:", fullText);
+
       setTimeout(() => {
-        editorRef.current?.setContent(fullText);
+        if (editorRef.current) {
+          console.log("🧪 editorRef mevcut, içerik ekleniyor");
+          editorRef.current.setContent(fullText);
+        } else {
+          console.error("❌ editorRef boş!");
+        }
       }, 100);
     };
 
@@ -78,8 +65,8 @@ function App() {
         style={{ marginBottom: '1rem' }}
       />
 
-      <button onClick={handleHighlight} style={{ margin: '1rem 0' }}>
-        Highlight et
+      <button onClick={handleHighlight} style={{ marginBottom: '1rem' }}>
+        Seçili Metni Vurgula
       </button>
 
       <Editor
@@ -91,7 +78,8 @@ function App() {
           height: 500,
           menubar: false,
           plugins: 'lists link',
-          toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | removeformat',
+          toolbar:
+            'undo redo | bold italic underline | alignleft aligncenter alignright | removeformat',
         }}
       />
     </div>
